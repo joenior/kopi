@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a desc-a">
+  <title id="title-a">MenuKita — Lengkung Kedai</title>
+  <desc id="desc-a">Monogram M geometris modern dari dua kanopi kedai kopi yang berpadu dengan aksen cangkir.</desc>
+  <defs>
+    <linearGradient id="coffee-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8a5a3c" />
+      <stop offset="100%" stop-color="#5a3822" />
+    </linearGradient>
+  </defs>
+  <style>
+    :root {
+      --brand-fill: url(#coffee-grad);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --brand-fill: #d99b6c;
+      }
+    }
+    .brand-mark {
+      fill: var(--brand-fill, #6f4e37);
+    }
+  </style>
+  <path class="brand-mark" fill="#6f4e37" fill-rule="evenodd" d="
+    M 32 208
+    V 105
+    A 57 57 0 0 1 128 63.43
+    A 57 57 0 0 1 224 105
+    V 208
+    H 188
+    V 105
+    A 21 21 0 0 0 146 105
+    V 152
+    A 18 18 0 0 1 110 152
+    V 105
+    A 21 21 0 0 0 68 105
+    V 208
+    Z
+    M 128 178
+    A 14 14 0 1 0 128 206
+    A 14 14 0 1 0 128 178
+    Z
+  "/>
+</svg>

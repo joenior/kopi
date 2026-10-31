@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>MenuKita – Prototipe</title>
+    <style>
+        :root {
+            --bg: #faf6f1;
+            --card: #fff;
+            --ink: #2b1d14;
+            --mut: #7a6a5d;
+            --pri: #6f4e37;
+            --pri-ink: #fff;
+            --line: #e8dccf;
+            --warn: #b26a00;
+            --err: #c0392b;
+            color-scheme: light;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #1c1511;
+                --card: #2a201a;
+                --ink: #f3e9df;
+                --mut: #b7a698;
+                --pri: #c8946a;
+                --pri-ink: #1c1511;
+                --line: #43362c;
+                --warn: #f2b45a;
+                --err: #ff8a80;
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #1c1511;
+            --card: #2a201a;
+            --ink: #f3e9df;
+            --mut: #b7a698;
+            --pri: #c8946a;
+            --pri-ink: #1c1511;
+            --line: #43362c;
+            --warn: #f2b45a;
+            --err: #ff8a80;
+            color-scheme: dark
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0 0 auto;
+            height: env(safe-area-inset-top, 0px);
+            background: var(--card);
+            z-index: 10
+        }
+
+        header {
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 9;
+            background: var(--card);
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            gap: 8px
+        }
+
+        .brand {
+            font-weight: 700;
+            color: var(--pri)
+        }
+
+        .seg {
+            display: flex;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 2px
+        }
+
+        .seg button {
+            border: 0;
+            background: none;
+            color: var(--mut);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font: inherit;
+            font-size: 14px;
+            cursor: pointer
+        }
+
+        .seg button.on {
+            background: var(--pri);
+            color: var(--pri-ink)
+        }
+
+        .hint {
+            margin: 0;
+            padding: 6px 14px;
+            font-size: 13px;
+            color: var(--mut);
+            text-align: center
+        }
+
+        #app {
+            margin: 0 auto;
+            padding: 4px 14px 24px
+        }
+
+        #app.cust {
+            max-width: 480px
+        }
+
+        #app.adm {
+            max-width: 960px
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 12px 0 2px
+        }
+
+        h2 {
+            font-size: 17px;
+            margin: 18px 0 8px
+        }
+
+        h3 {
+            margin: 0 0 8px;
+            font-size: 15px
+        }
+
+        .mut {
+            color: var(--mut)
+        }
+
+        small {
+            font-size: 13px
+        }
+
+        .chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0
+        }
+
+        .chip {
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink);
+            padding: 7px 14px;
+            border-radius: 999px;
+            font: inherit;
+            font-size: 14px;
+            white-space: nowrap;
+            cursor: pointer
+        }
+
+        .chip.on {
+            background: var(--pri);
+            color: var(--pri-ink);
+            border-color: var(--pri)
+        }
+
+        .card {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 10px;
+            margin: 8px 0
+        }
+
+        .em {
+            font-size: 32px;
+            width: 56px;
+            height: 56px;
+            display: grid;
+            place-items: center;
+            background: var(--bg);
+            border-radius: 12px;
+            flex: none
+        }
+
+        .g {
+            flex: 1;
+            min-width: 0
+        }
+
+        .pr {
+            color: var(--pri)
+        }
+
+        button.pri {
+            background: var(--pri);
+            color: var(--pri-ink);
+            border: 0;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer
+        }
+
+        .wide {
+            width: 100%;
+            padding: 13px !important;
+            margin-top: 12px
+        }
+
+        .st {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .st button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink);
+            font-size: 18px;
+            cursor: pointer
+        }
+
+        .tag {
+            background: var(--line);
+            color: var(--mut);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 13px
+        }
+
+        .bar {
+            position: sticky;
+            bottom: env(safe-area-inset-bottom, 0px);
+            padding: 10px 0 4px;
+            background: linear-gradient(transparent, var(--bg) 35%)
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--line)
+        }
+
+        label {
+            display: block;
+            margin: 10px 0;
+            font-size: 14px;
+            color: var(--mut)
+        }
+
+        input,
+        select,
+        textarea {
+            display: block;
+            width: 100%;
+            margin-top: 4px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--card);
+            color: var(--ink);
+            font: inherit
+        }
+
+        .lnk {
+            background: none;
+            border: 0;
+            color: var(--pri);
+            font: inherit;
+            padding: 8px 0;
+            cursor: pointer
+        }
+
+        .err {
+            color: var(--err);
+            font-size: 14px;
+            margin: 8px 0 0
+        }
+
+        .steps {
+            display: flex;
+            margin: 14px 0
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            font-size: 13px;
+            color: var(--mut)
+        }
+
+        .step i {
+            display: grid;
+            place-items: center;
+            width: 30px;
+            height: 30px;
+            margin: 0 auto 4px;
+            border-radius: 50%;
+            background: var(--line);
+            font-style: normal
+        }
+
+        .step.on {
+            color: var(--ink);
+            font-weight: 600
+        }
+
+        .step.on i {
+            background: var(--pri);
+            color: var(--pri-ink)
+        }
+
+        .msg {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            margin: 0 0 8px
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+            overflow-x: auto
+        }
+
+        .cols {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px
+        }
+
+        .card2 {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px
+        }
+
+        .card2 ul,
+        .msg+ul {
+            margin: 6px 0;
+            padding-left: 18px
+        }
+
+        .badge {
+            background: var(--pri);
+            color: var(--pri-ink);
+            border-radius: 999px;
+            padding: 1px 8px;
+            font-size: 12px
+        }
+
+        .note {
+            font-size: 14px;
+            color: var(--warn);
+            margin-bottom: 6px
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px
+        }
+
+        .stat {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px
+        }
+
+        .stat b {
+            display: block;
+            font-size: 20px
+        }
+
+        .fill {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--pri);
+            margin-bottom: 6px
+        }
+    </style>
+</head>
+
+<body>
+    <header><span class="brand">☕ MenuKita</span>
+        <div class="seg"><button id="bc" onclick="S.mode='cust';R()">Pelanggan</button><button id="ba"
+                onclick="S.mode='adm';R()">Pemilik</button></div>
+    </header>
+    <p class="hint">Prototipe demo, data hanya tersimpan di memori. Kirim pesanan sebagai Pelanggan, lalu buka tampilan
+        Pemilik.</p>
+    <main id="app"></main>
+    <script>
+        const MENU = [{ id: 1, c: 'Kopi', n: 'Kopi Susu Gula Aren', p: 22000, e: '☕' }, { id: 2, c: 'Kopi', n: 'Americano', p: 18000, e: '☕' }, { id: 3, c: 'Kopi', n: 'Latte', p: 25000, e: '🥛' }, { id: 4, c: 'Non-Kopi', n: 'Matcha Latte', p: 26000, e: '🍵' }, { id: 5, c: 'Non-Kopi', n: 'Coklat Dingin', p: 24000, e: '🍫' }, { id: 6, c: 'Makanan', n: 'Roti Bakar Coklat', p: 18000, e: '🍞' }, { id: 7, c: 'Makanan', n: 'Kentang Goreng', p: 17000, e: '🍟' }, { id: 8, c: 'Makanan', n: 'Croissant', p: 20000, e: '🥐' }];
+        const ST = ['baru', 'diproses', 'siap', 'selesai'], LB = { baru: 'Baru', diproses: 'Diproses', siap: 'Siap', selesai: 'Selesai' };
+        const S = {
+            mode: 'cust', v: 'menu', cat: 'Semua', cart: {}, mine: null, tab: 'pesanan', sold: {}, seq: 100, err: '', form: { name: '', table: '', type: 'dine', note: '' },
+            orders: [{ id: 98, name: 'Rina', table: '2', items: { 1: 2, 6: 1 }, note: 'Es sedikit', total: 62000, st: 'selesai', t: '09.12' }, { id: 99, name: 'Dimas', table: null, items: { 2: 1, 8: 1 }, note: '', total: 38000, st: 'diproses', t: '09.40' }, { id: 100, name: 'Sari', table: '5', items: { 3: 1, 7: 1 }, note: 'Tanpa gula', total: 42000, st: 'baru', t: '09.52' }]
+        };
+        const rp = n => 'Rp' + n.toLocaleString('id-ID');
+        const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const item = i => MENU.find(m => m.id == i);
+        const qty = () => Object.values(S.cart).reduce((a, b) => a + b, 0);
+        const total = () => Object.entries(S.cart).reduce((a, [i, q]) => a + item(i).p * q, 0);
+        const now = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const list = o => '<ul>' + Object.entries(o.items).map(([i, q]) => `<li>${q}× ${item(i).n}</li>`).join('') + '</ul>';
+        function add(i, d) { const q = (S.cart[i] || 0) + d; if (q <= 0) delete S.cart[i]; else S.cart[i] = q; R() }
+        function adv(id) { const o = S.orders.find(x => x.id == id); o.st = ST[ST.indexOf(o.st) + 1]; R() }
+        function send() {
+            const f = S.form;
+            if (!qty()) { S.err = 'Keranjang masih kosong.'; return R() }
+            if (f.type == 'dine' && !f.table) { S.err = 'Pilih nomor meja terlebih dahulu.'; return R() }
+            const o = { id: ++S.seq, name: f.name.trim() || 'Pelanggan', table: f.type == 'dine' ? f.table : null, items: { ...S.cart }, note: f.note.trim(), total: total(), st: 'baru', t: now() };
+            S.orders.push(o); S.mine = o.id; S.cart = {}; S.err = ''; S.form.note = ''; S.v = 'status'; R()
+        }
+        function menuV() {
+            const cats = ['Semua', 'Kopi', 'Non-Kopi', 'Makanan'];
+            return `<h1>Kedai Senja (contoh)</h1><p class="mut" style="margin:0">${S.form.table ? 'Meja ' + S.form.table + ' · ' : ''}Pesan dari HP, bayar di kasir</p>
+ <div class="chips">${cats.map(c => `<button class="chip ${c == S.cat ? 'on' : ''}" onclick="S.cat='${c}';R()">${c}</button>`).join('')}</div>
+ ${MENU.filter(m => S.cat == 'Semua' || m.c == S.cat).map(m => {
+                const q = S.cart[m.id] || 0;
+                return `<div class="card"><div class="em">${m.e}</div><div class="g"><b>${m.n}</b><div class="mut"><small>${m.c}</small></div><b class="pr">${rp(m.p)}</b></div>
+  ${S.sold[m.id] ? '<span class="tag">Habis</span>' : q ? `<div class="st"><button onclick="add(${m.id},-1)">−</button><b>${q}</b><button onclick="add(${m.id},1)">+</button></div>` : `<button class="pri" onclick="add(${m.id},1)">Tambah</button>`}</div>`
+            }).join('')}
+ ${qty() ? `<div class="bar"><button class="pri wide" style="margin:0" onclick="S.v='cart';R()">Lihat keranjang · ${qty()} item · ${rp(total())}</button></div>` : ''}`
+        }
+        function cartV() {
+            const f = S.form;
+            return `<button class="lnk" onclick="S.v='menu';R()">← Kembali ke menu</button><h1>Keranjang</h1>
+ ${Object.entries(S.cart).map(([i, q]) => `<div class="row"><span>${item(i).n}<br><small class="mut">${rp(item(i).p)}</small></span><span class="st"><button onclick="add(${i},-1)">−</button><b>${q}</b><button onclick="add(${i},1)">+</button></span></div>`).join('') || '<p class="mut">Keranjang kosong.</p>'}
+ <div class="row"><b>Total</b><b>${rp(total())}</b></div>
+ <h2>Data pesanan</h2>
+ <label>Nama<input value="${esc(f.name)}" oninput="S.form.name=this.value" placeholder="Nama panggilan"></label>
+ <div class="chips"><button class="chip ${f.type == 'dine' ? 'on' : ''}" onclick="S.form.type='dine';R()">Makan di tempat</button><button class="chip ${f.type == 'take' ? 'on' : ''}" onclick="S.form.type='take';R()">Dibawa pulang</button></div>
+ ${f.type == 'dine' ? `<label>Nomor meja<select onchange="S.form.table=this.value"><option value="">Pilih meja</option>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option ${f.table == n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>` : ''}
+ <label>Catatan<textarea rows="2" oninput="S.form.note=this.value" placeholder="Contoh: es sedikit, tanpa gula">${esc(f.note)}</textarea></label>
+ ${S.err ? `<p class="err">${S.err}</p>` : ''}
+ <button class="pri wide" onclick="send()">Kirim pesanan</button>`}
+        function statusV() {
+            const o = S.orders.find(x => x.id == S.mine); if (!o) { S.v = 'menu'; return menuV() }
+            const i = ST.indexOf(o.st);
+            return `<h1>Pesanan #${o.id}</h1><p class="mut" style="margin:0">${o.table ? 'Meja ' + o.table : 'Dibawa pulang'} · ${esc(o.name)} · ${o.t}</p>
+ <div class="steps">${ST.map((s, k) => `<div class="step ${k <= i ? 'on' : ''}"><i>${k < i ? '✓' : k + 1}</i>${LB[s]}</div>`).join('')}</div>
+ <p class="msg">${['Pesanan diterima kedai.', 'Barista sedang menyiapkan pesananmu.', 'Pesananmu sudah siap!', 'Pesanan selesai. Terima kasih!'][i]}</p>${list(o)}
+ <div class="row"><b>Total (bayar di kasir)</b><b>${rp(o.total)}</b></div>
+ <button class="pri wide" onclick="S.v='menu';R()">Pesan lagi</button>
+ <p class="mut" style="text-align:center"><small>Buka tampilan Pemilik untuk mengubah status pesanan ini.</small></p>`}
+        function adminV() {
+            const tabs = [['pesanan', 'Pesanan'], ['menu', 'Kelola menu'], ['laporan', 'Laporan']]; let b = '';
+            if (S.tab == 'pesanan') {
+                const nx = { baru: 'Proses', diproses: 'Siap', siap: 'Selesai' };
+                b = `<div class="cols">${['baru', 'diproses', 'siap'].map(c => {
+                    const L = S.orders.filter(o => o.st == c);
+                    return `<section><h3>${LB[c]} <span class="badge">${L.length}</span></h3>${L.map(o => `<div class="card2"><div class="row" style="border:0;padding:0"><b>#${o.id} · ${o.table ? 'Meja ' + o.table : 'Take away'}</b><small class="mut">${o.t}</small></div><div>${esc(o.name)}</div>${list(o)}${o.note ? `<div class="note">“${esc(o.note)}”</div>` : ''}<div class="row" style="border:0;padding:0"><b>${rp(o.total)}</b><button class="pri" onclick="adv(${o.id})">${nx[c]} →</button></div></div>`).join('') || '<p class="mut">Tidak ada pesanan.</p>'}</section>`
+                }).join('')}</div>`
+            }
+            else if (S.tab == 'menu') {
+                b = MENU.map(m => `<div class="row"><span>${m.e} ${m.n}<br><small class="mut">${m.c} · ${rp(m.p)}</small></span><button class="chip ${S.sold[m.id] ? 'on' : ''}" onclick="S.sold[${m.id}]=!S.sold[${m.id}];R()">${S.sold[m.id] ? 'Habis · aktifkan' : 'Tandai habis'}</button></div>`).join('')
+            }
+            else {
+                const O = S.orders, rev = O.reduce((a, o) => a + o.total, 0), agg = {};
+                O.forEach(o => Object.entries(o.items).forEach(([i, q]) => agg[i] = (agg[i] || 0) + q));
+                const top = Object.entries(agg).sort((a, b) => b[1] - a[1]).slice(0, 5), mx = top.length ? top[0][1] : 1;
+                b = `<div class="stats"><div class="stat"><small class="mut">Pesanan hari ini</small><b>${O.length}</b></div><div class="stat"><small class="mut">Omzet</small><b>${rp(rev)}</b></div><div class="stat"><small class="mut">Rata-rata per pesanan</small><b>${rp(O.length ? Math.round(rev / O.length) : 0)}</b></div></div>
+  <h2>Menu terlaris</h2>${top.map(([i, q]) => `<div class="row" style="border:0;padding:4px 0"><span>${item(i).n}</span><b>${q}</b></div><div class="fill" style="width:${q / mx * 100}%"></div>`).join('')}`
+            }
+            return `<h1>Dasbor Kedai Senja</h1><div class="tabs">${tabs.map(([k, l]) => `<button class="chip ${S.tab == k ? 'on' : ''}" onclick="S.tab='${k}';R()">${l}</button>`).join('')}</div>${b}`
+        }
+        function R() {
+            const a = document.getElementById('app'); a.className = S.mode;
+            document.getElementById('bc').className = S.mode == 'cust' ? 'on' : ''; document.getElementById('ba').className = S.mode == 'adm' ? 'on' : '';
+            a.innerHTML = S.mode == 'adm' ? adminV() : S.v == 'cart' ? cartV() : S.v == 'status' ? statusV() : menuV()
+        }
+        R();
+    </script>
+</body>
+
+</html>
