@@ -3,6 +3,11 @@ import fs from 'fs';
 import path from 'path';
 
 export async function GET() {
+  // Cegah information disclosure di lingkungan production
+  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_SCHEMA_DOWNLOAD) {
+    return new NextResponse('Not found', { status: 404 });
+  }
+
   try {
     const schemaPath = path.join(process.cwd(), 'supabase', 'schema.sql');
     if (fs.existsSync(schemaPath)) {

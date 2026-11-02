@@ -6,35 +6,51 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, ShieldCheck, Sun, Moon, Database, Check, Copy, X, LockKey, SignOut } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { SPRING_LAYOUT } from '@/lib/ease';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, shouldShowDbStatus } from '@/lib/supabase';
 
 interface HeaderProps {
   mode: 'cust' | 'adm';
   onModeChange: (mode: 'cust' | 'adm') => void;
   tableNumber?: string | null;
   authUser?: SupabaseUser | null;
+  userRole?: 'staff' | 'owner';
+  onRoleChange?: (role: 'staff' | 'owner') => void;
   onOpenAuth?: () => void;
   onSignOut?: () => void;
 }
 
-export function Header({ mode, onModeChange, tableNumber, authUser, onOpenAuth, onSignOut }: HeaderProps) {
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const savedTheme = localStorage.getItem('menukita_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return savedTheme === 'dark' || (!savedTheme && prefersDark);
-  });
+export function Header({
+  mode,
+  onModeChange,
+  tableNumber,
+  authUser,
+  userRole = 'owner',
+  onRoleChange,
+  onOpenAuth,
+  onSignOut,
+}: HeaderProps) {
+  const [mounted, setMounted] = useState<boolean>(false);
+  const [isDark, setIsDark] = useState<boolean>(false);
   const [supabaseConnected] = useState<boolean>(() => isSupabaseConfigured());
+  const [showDbStatus] = useState<boolean>(() => shouldShowDbStatus());
   const [showDbModal, setShowDbModal] = useState<boolean>(false);
   const [copiedSql, setCopiedSql] = useState<boolean>(false);
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
+    const frame = requestAnimationFrame(() => {
+      setMounted(true);
+      const savedTheme = localStorage.getItem('menukita_theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const activeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+      setIsDark(activeDark);
+      if (activeDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const toggleTheme = () => {
     if (isDark) {
@@ -96,19 +112,21 @@ export function Header({ mode, onModeChange, tableNumber, authUser, onOpenAuth, 
 
           {/* Controls: Mode Switch, Theme, DB status */}
           <div className="flex items-center gap-2">
-            {/* Database indicator */}
-            <button
-              onClick={() => setShowDbModal(true)}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all active-press shadow-2xs cursor-pointer ${supabaseConnected
-                  ? 'bg-emerald-500/10 text-emerald-900 border-emerald-600/30 hover:bg-emerald-500/15 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700'
-                  : 'bg-amber-500/10 text-amber-900 border-amber-600/30 hover:bg-amber-500/15 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700'
-                }`}
-              title="Status Database Supabase"
-            >
-              <span className={`w-2 h-2 rounded-full ${supabaseConnected ? 'bg-emerald-600 dark:bg-emerald-400 animate-pulse' : 'bg-amber-600 dark:bg-amber-400'}`} />
-              <Database size={13} weight="bold" className={supabaseConnected ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'} />
-              <span>{supabaseConnected ? 'Supabase Live' : 'Demo Lokal'}</span>
-            </button>
+            {/* Database indicator (Hanya di preview / disembunyikan di production) */}
+            {showDbStatus && (
+              <button
+                onClick={() => setShowDbModal(true)}
+                className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all active-press shadow-2xs cursor-pointer ${supabaseConnected
+                    ? 'bg-emerald-500/10 text-emerald-900 border-emerald-600/30 hover:bg-emerald-500/15 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700'
+                    : 'bg-amber-500/10 text-amber-900 border-amber-600/30 hover:bg-amber-500/15 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700'
+                  }`}
+                title="Status Database Supabase"
+              >
+                <span className={`w-2 h-2 rounded-full ${supabaseConnected ? 'bg-emerald-600 dark:bg-emerald-400 animate-pulse' : 'bg-amber-600 dark:bg-amber-400'}`} />
+                <Database size={13} weight="bold" className={supabaseConnected ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'} />
+                <span>{supabaseConnected ? 'Supabase Live' : 'Demo Lokal'}</span>
+              </button>
+            )}
 
             {/* Segmented Mode Button with beUI Shared Layout Pill */}
             <div className="relative flex items-center p-1 bg-[var(--bg-muted)] border border-[var(--border-subtle)] rounded-full">
@@ -154,7 +172,7 @@ export function Header({ mode, onModeChange, tableNumber, authUser, onOpenAuth, 
                   />
                 )}
                 <ShieldCheck size={13} weight={mode === 'adm' ? 'bold' : 'regular'} />
-                <span>Pemilik</span>
+                <span>{mode === 'adm' ? (userRole === 'staff' ? 'Staf (Dapur)' : 'Pemilik') : 'Staf / Pemilik'}</span>
                 {!authUser && supabaseConnected && (
                   <LockKey size={11} className="text-amber-500 opacity-90" weight="bold" />
                 )}
@@ -183,13 +201,14 @@ export function Header({ mode, onModeChange, tableNumber, authUser, onOpenAuth, 
             <motion.button
               type="button"
               onClick={toggleTheme}
+              suppressHydrationWarning
               whileTap={{ scale: 0.88, rotate: isDark ? 45 : -45 }}
               whileHover={{ scale: 1.06 }}
-              className="w-8 h-8 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center justify-center transition-colors cursor-pointer"
               title="Ganti Tema"
               aria-label="Ganti Tema"
             >
-              {isDark ? <Sun size={16} weight="bold" /> : <Moon size={16} weight="bold" />}
+              {mounted && isDark ? <Sun size={16} weight="bold" /> : <Moon size={16} weight="bold" />}
             </motion.button>
           </div>
         </div>

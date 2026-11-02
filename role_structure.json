@@ -1,0 +1,169 @@
+{
+    "app": "MenuKita",
+    "stack": {
+        "frontend": "Next.js",
+        "backend": "Supabase (Postgres, Auth, Realtime, Storage, RLS)"
+    },
+    "roles": {
+        "customer": {
+            "label": "Pelanggan",
+            "auth": "none (scan QR meja atau kiosk, tanpa login)",
+            "scope": "hanya pesanan miliknya sendiri"
+        },
+        "staff": {
+            "label": "Staf (barista + kasir)",
+            "auth": "supabase_auth",
+            "scope": "hanya data kedai sendiri (cafe_id)"
+        },
+        "owner": {
+            "label": "Pemilik",
+            "auth": "supabase_auth",
+            "scope": "hanya data kedai sendiri (cafe_id)"
+        }
+    },
+    "permissions": [
+        {
+            "id": "menu.view_active",
+            "description": "Lihat menu aktif",
+            "roles": [
+                "customer",
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "order.create_qr",
+            "description": "Buat pesanan (QR/kiosk)",
+            "roles": [
+                "customer"
+            ]
+        },
+        {
+            "id": "order.view_own",
+            "description": "Lihat status pesanan sendiri",
+            "roles": [
+                "customer"
+            ]
+        },
+        {
+            "id": "order.view_queue",
+            "description": "Lihat antrean semua pesanan",
+            "roles": [
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "order.update_status",
+            "description": "Geser status Baru -> Diproses -> Siap",
+            "roles": [
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "menu.toggle_availability",
+            "description": "Tandai menu habis",
+            "roles": [
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "order.create_walkin",
+            "description": "Input pesanan walk-in",
+            "roles": [
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "order.record_payment_complete",
+            "description": "Catat pembayaran lalu set status Selesai",
+            "roles": [
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "order.cancel",
+            "description": "Batalkan pesanan (wajib alasan)",
+            "roles": [
+                "staff",
+                "owner"
+            ]
+        },
+        {
+            "id": "menu.manage",
+            "description": "Tambah, ubah, hapus menu dan harga",
+            "roles": [
+                "owner"
+            ]
+        },
+        {
+            "id": "table.manage_qr",
+            "description": "Kelola meja dan buat QR",
+            "roles": [
+                "owner"
+            ]
+        },
+        {
+            "id": "report.sales",
+            "description": "Laporan penjualan",
+            "roles": [
+                "owner"
+            ]
+        },
+        {
+            "id": "staff.manage",
+            "description": "Kelola akun staf",
+            "roles": [
+                "owner"
+            ]
+        },
+        {
+            "id": "cafe.manage_profile",
+            "description": "Kelola profil kedai",
+            "roles": [
+                "owner"
+            ]
+        }
+    ],
+    "order_status_flow": [
+        "baru",
+        "diproses",
+        "siap",
+        "selesai",
+        "dibatalkan"
+    ],
+    "payment": {
+        "mode": "manual_recording_only",
+        "methods": [
+            "tunai",
+            "qris",
+            "transfer"
+        ],
+        "note": "payment_status disimpan terpisah dari status pesanan; tanpa payment gateway"
+    },
+    "constraints": [
+        "Semua tabel utama memakai cafe_id dan dilindungi RLS; user hanya boleh mengakses cafe_id miliknya.",
+        "Role disimpan di tabel keanggotaan (staff_memberships: cafe_id, user_id, role), bukan hanya di akun.",
+        "Staf hanya boleh mengubah kolom menu_items.is_available, bukan harga atau kolom lain; terapkan lewat RPC/security definer function atau column-level privilege, karena RLS hanya membatasi baris.",
+        "Perubahan status pesanan hanya maju sesuai alur; pembatalan wajib mengisi alasan dan tercatat di log.",
+        "Pelanggan tanpa login hanya bisa membaca pesanannya lewat ID pesanan yang sulit ditebak (UUID).",
+        "QR meja memuat token; token salah atau kedai nonaktif harus ditolak.",
+        "Pembatasan jumlah pesanan per perangkat/meja untuk mencegah pesanan iseng.",
+        "Staf tidak boleh melihat laporan, mengubah harga, mengelola meja/QR, atau mengelola akun.",
+        "Pemilik tidak mengubah konfigurasi Supabase; itu dilakukan lewat dasbor Supabase oleh pengembang."
+    ],
+    "out_of_scope": [
+        "Role Manajer Toko",
+        "Admin Platform (dikelola lewat dasbor Supabase)",
+        "Shift kasir dan laporan per shift",
+        "Cetak struk",
+        "Running text",
+        "Multi-cabang",
+        "Payment gateway",
+        "2FA untuk pemilik"
+    ]
+}

@@ -13,6 +13,7 @@ import {
   Receipt,
   Storefront,
   Bag,
+  XCircle,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AnimatedBadge } from '@/components/motion/AnimatedBadge';
@@ -37,8 +38,10 @@ export function CustomerStatus({ order, onOrderAgain }: CustomerStatusProps) {
     diproses: 1,
     siap: 2,
     selesai: 3,
+    dibatalkan: -1,
   };
 
+  const isCancelled = order.status === 'dibatalkan';
   const currentIdx = statusIndexMap[order.status] ?? 0;
 
   const statusMessages = [
@@ -66,7 +69,15 @@ export function CustomerStatus({ order, onOrderAgain }: CustomerStatusProps) {
     },
   ];
 
-  const activeMsg = statusMessages[currentIdx];
+  const activeMsg = isCancelled
+    ? {
+        title: 'Pesanan Dibatalkan',
+        desc: order.cancellation_reason
+          ? `Alasan: "${order.cancellation_reason}"`
+          : 'Pesanan dibatalkan oleh staf atau kasir.',
+        badgeColor: 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/50 dark:text-rose-200',
+      }
+    : statusMessages[currentIdx] || statusMessages[0];
 
   return (
     <div className="w-full max-w-lg mx-auto pb-24">
@@ -166,7 +177,9 @@ export function CustomerStatus({ order, onOrderAgain }: CustomerStatusProps) {
           >
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-xl bg-white/50 dark:bg-black/20 flex-none mt-0.5">
-                {currentIdx === 2 ? (
+                {isCancelled ? (
+                  <XCircle size={22} weight="fill" className="text-rose-600" />
+                ) : currentIdx === 2 ? (
                   <Sparkle size={22} weight="fill" className="text-emerald-600 animate-bounce" />
                 ) : currentIdx === 3 ? (
                   <CheckCircle size={22} weight="fill" className="text-neutral-600" />
@@ -229,10 +242,25 @@ export function CustomerStatus({ order, onOrderAgain }: CustomerStatusProps) {
           )}
 
           <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex justify-between items-center font-extrabold text-sm sm:text-base">
-            <span className="text-[var(--text-main)]">Total (Bayar di Kasir)</span>
+            <span className="text-[var(--text-main)]">Total Pesanan</span>
             <span className="text-[var(--primary)]">
               <AnimatedNumber value={order.total_price} prefix="Rp " />
             </span>
+          </div>
+
+          <div className="mt-2.5 pt-2 border-t border-[var(--border-subtle)]/60 flex items-center justify-between text-xs">
+            <span className="text-[var(--text-muted)] font-medium">Status Pembayaran:</span>
+            {order.payment_status === 'lunas' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold">
+                <Check size={12} weight="bold" />
+                Lunas {order.payment_method ? `(${order.payment_method.toUpperCase()})` : ''}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-semibold">
+                <Clock size={12} weight="bold" />
+                Menunggu Pembayaran Kasir
+              </span>
+            )}
           </div>
         </div>
 

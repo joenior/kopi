@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AdaptiveStepper } from '@/components/motion/AdaptiveStepper';
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber';
 import { ExpandingButton } from '@/components/motion/ExpandingButton';
+import { MenuIcon } from './MenuIcon';
 
 interface CustomerCartProps {
   cart: Record<string, number>;
@@ -135,8 +136,8 @@ export function CustomerCart({
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xl">
-                          {item.emoji}
+                        <div className="w-full h-full flex items-center justify-center bg-[var(--bg-muted)] text-[var(--primary)]">
+                          <MenuIcon category={item.category} name={item.name} size={22} />
                         </div>
                       )}
                     </div>

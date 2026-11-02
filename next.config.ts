@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  allowedDevOrigins: ['192.168.137.1', 'localhost', '127.0.0.1'],
+  env: {
+    NEXT_PUBLIC_VERCEL_ENV:
+      process.env.VERCEL_ENV || process.env.NEXT_PUBLIC_VERCEL_ENV || '',
+  },
   cacheComponents: true,
   partialPrefetching: true,
   images: {

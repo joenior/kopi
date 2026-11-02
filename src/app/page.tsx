@@ -9,8 +9,8 @@ import { CustomerCart } from '@/components/CustomerCart';
 import { CustomerStatus } from '@/components/CustomerStatus';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { AdminAuthModal } from '@/components/AdminAuthModal';
-import { LockKey } from '@phosphor-icons/react';
-import { MenuItem, Order, CustomerForm, OrderStatus } from '@/lib/types';
+import { LockKey, WarningCircle } from '@phosphor-icons/react';
+import { MenuItem, Order, CustomerForm, OrderStatus, PaymentMethod } from '@/lib/types';
 import {
   fetchMenuData,
   fetchOrdersData,
@@ -23,35 +23,85 @@ import {
   getAnnouncementText,
   fetchAnnouncementText,
   saveAnnouncementText,
+  validateTableQR,
+  checkOrderRateLimit,
+  DEFAULT_CAFE_ID,
+  DEFAULT_ANNOUNCEMENT,
 } from '@/lib/store';
-import { getSupabase, getAuthUser, signOutAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { getSupabase, getAuthUser, signOutAdmin, isSupabaseConfigured, getStaffMembership } from '@/lib/supabase';
+import {
+  AnimatedToastStack,
+  useAnimatedToastStack,
+} from '@/components/motion/animated-toast-stack';
+
+const statusDisplayNames: Record<OrderStatus, string> = {
+  baru: 'Baru Masuk',
+  diproses: 'Sedang Dibuat',
+  siap: 'Siap Ambil / Diantar',
+  selesai: 'Selesai',
+  dibatalkan: 'Dibatalkan',
+};
 
 function CoffeeShopApp() {
   const searchParams = useSearchParams();
   const tableParam = searchParams.get('meja') || '';
+  const tokenParam = searchParams.get('token') || '';
   const initialModeParam = searchParams.get('mode') === 'adm' ? 'adm' : 'cust';
 
   const [mode, setMode] = useState<'cust' | 'adm'>(initialModeParam);
+  const [adminRole, setAdminRole] = useState<'staff' | 'owner'>('owner');
   const [custView, setCustView] = useState<'menu' | 'cart' | 'status'>('menu');
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [deviceId, setDeviceId] = useState<string>('');
+  const [myOrderIds, setMyOrderIds] = useState<string[]>([]);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [announcementText, setAnnouncementText] = useState<string>(() => getAnnouncementText());
+  const [announcementText, setAnnouncementText] = useState<string>(DEFAULT_ANNOUNCEMENT);
+  const [tableValidation, setTableValidation] = useState<{ checked: boolean; valid: boolean; reason?: string }>({
+    checked: false,
+    valid: true,
+  });
+
+  // Client-side post-hydration state restore from localStorage
+  useEffect(() => {
+    let dId = localStorage.getItem('menukita_device_id');
+    if (!dId) {
+      dId = 'dev_' + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('menukita_device_id', dId);
+    }
+    setDeviceId(dId);
+
+    try {
+      const savedOrders = localStorage.getItem('menukita_my_orders');
+      if (savedOrders) {
+        const parsed = JSON.parse(savedOrders);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMyOrderIds(parsed);
+          setCurrentOrderId((prev) => prev || parsed[0]);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const savedAnnouncement = localStorage.getItem('menukita_marquee_text');
+    if (savedAnnouncement?.trim()) {
+      setAnnouncementText(savedAnnouncement.trim());
+    }
+  }, []);
+
+  // Animated Toast Stack (beUI)
+  const { toasts, showToast, dismissToast, promiseToast } = useAnimatedToastStack({
+    defaultDuration: 3600,
+    limit: 4,
+  });
 
   // Supabase Auth State
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
-
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4000);
-  }, []);
 
   const [form, setForm] = useState<CustomerForm>({
     name: '',
@@ -59,6 +109,46 @@ function CoffeeShopApp() {
     type: tableParam ? 'dine' : 'dine',
     note: '',
   });
+
+  // Validate Table QR Token (Customer Guard)
+  useEffect(() => {
+    async function checkQR() {
+      if (tableParam) {
+        const res = await validateTableQR(DEFAULT_CAFE_ID, tableParam, tokenParam);
+        setTableValidation({ checked: true, valid: res.valid, reason: res.reason });
+        if (!res.valid) {
+          showToast(`QR Meja #${tableParam} tidak valid atau kedai tutup.`);
+        }
+      } else {
+        setTableValidation({ checked: true, valid: true });
+      }
+    }
+    checkQR();
+  }, [tableParam, tokenParam, showToast]);
+
+  // Load Staff/Owner Role from Supabase Membership
+  useEffect(() => {
+    async function loadRole() {
+      if (authUser?.id) {
+        const membership = await getStaffMembership(authUser.id);
+        if (membership?.role) {
+          setAdminRole(membership.role);
+        }
+      }
+    }
+    loadRole();
+  }, [authUser]);
+
+  // Guard Mode Admin: Blokir akses unauthenticated ke dashboard jika Supabase terhubung
+  useEffect(() => {
+    if (mode === 'adm' && !authUser && isSupabaseConfigured()) {
+      const frame = requestAnimationFrame(() => {
+        setShowAuthModal(true);
+        setMode('cust');
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [mode, authUser]);
 
   // Sync running text marquee from store/localStorage
   useEffect(() => {
@@ -73,9 +163,28 @@ function CoffeeShopApp() {
 
   const handleUpdateAnnouncement = useCallback(async (newText: string) => {
     setAnnouncementText(newText);
-    await saveAnnouncementText(newText);
-    showToast('Teks pengumuman berjalan berhasil diperbarui!');
-  }, [showToast]);
+    try {
+      await promiseToast(
+        saveAnnouncementText(newText),
+        {
+          loading: {
+            title: 'Menyimpan Teks Berjalan...',
+            description: 'Menyinkronkan pengumuman baru...',
+          },
+          success: {
+            title: 'Pengumuman Berhasil Disimpan!',
+            description: 'Teks baris berjalan telah diperbarui secara langsung.',
+          },
+          error: {
+            title: 'Gagal Menyimpan Pengumuman',
+            description: 'Terjadi kesalahan sistem saat menyimpan teks pengumuman.',
+          },
+        }
+      );
+    } catch {
+      // Handled by toast
+    }
+  }, [promiseToast]);
 
   // Check Supabase Auth State
   useEffect(() => {
@@ -126,15 +235,17 @@ function CoffeeShopApp() {
 
     async function initData() {
       try {
-        const [menuData, ordersData, announcementData] = await Promise.all([
+        const [menuData, ordersData, announcementData, user] = await Promise.all([
           fetchMenuData(),
           fetchOrdersData(),
           fetchAnnouncementText(),
+          getAuthUser(),
         ]);
         if (!ignore) {
           setMenu(menuData);
           setOrders(ordersData);
           if (announcementData) setAnnouncementText(announcementData);
+          if (user) setAuthUser(user);
         }
       } catch (err) {
         console.error('Error memuat data:', err);
@@ -158,7 +269,9 @@ function CoffeeShopApp() {
           async (payload: { eventType: string; new?: Record<string, unknown> }) => {
             console.log('Realtime Order Event:', payload);
             const updatedOrders = await fetchOrdersData();
-            setOrders(updatedOrders);
+            if (updatedOrders.length > 0) {
+              setOrders(updatedOrders);
+            }
 
             if (payload.eventType === 'UPDATE' && payload.new) {
               const updatedOrder = payload.new as { id?: string; status?: string };
@@ -209,7 +322,9 @@ function CoffeeShopApp() {
     // LocalStorage cross-tab sync listeners for demo mode
     const handleLocalOrderUpdate = async () => {
       const updatedOrders = await fetchOrdersData();
-      setOrders(updatedOrders);
+      if (updatedOrders.length > 0) {
+        setOrders(updatedOrders);
+      }
     };
 
     const handleLocalMenuUpdate = async () => {
@@ -246,17 +361,48 @@ function CoffeeShopApp() {
     });
   };
 
-  // Submit order
+  // Submit order with Rate Limit & Token Check + Promise Toast
   const handleSubmitOrder = async () => {
+    if (tableParam && tableValidation.checked && !tableValidation.valid) {
+      showToast('QR Meja tidak valid atau kedai tutup. Silakan hubungi kasir.');
+      return;
+    }
+
+    // Rate Limit Check per Device/Table
+    const rateCheck = await checkOrderRateLimit(DEFAULT_CAFE_ID, form.table || null, deviceId);
+    if (!rateCheck.allowed) {
+      showToast(rateCheck.message || 'Batas pesanan aktif tercapai untuk perangkat ini.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const created = await submitNewOrder(form, cart, menu);
+      const created = await promiseToast(
+        submitNewOrder(form, cart, menu, deviceId),
+        {
+          loading: {
+            title: 'Mengirim Pesanan ke Dapur...',
+            description: 'Menyimpan rincian pesanan dan nomor meja.',
+          },
+          success: (res) => ({
+            title: res ? `Pesanan #${res.id} Terkirim!` : 'Pesanan Berhasil Terkirim!',
+            description: `Pesanan masuk antrean dapur. Silakan tunggu di meja ${form.table || 'Anda'}.`,
+          }),
+          error: {
+            title: 'Gagal Mengirim Pesanan',
+            description: 'Silakan periksa koneksi internet dan coba lagi.',
+          },
+        }
+      );
       if (created) {
         setCart({});
         setCurrentOrderId(created.id);
+        const updated = [created.id, ...myOrderIds.filter((x) => x !== created.id)];
+        setMyOrderIds(updated);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('menukita_my_orders', JSON.stringify(updated));
+        }
         setCustView('status');
-        showToast(`Pesanan #${created.id} berhasil terkirim ke dapur!`);
-        // Refresh orders list
         const updatedOrders = await fetchOrdersData();
         setOrders(updatedOrders);
       }
@@ -265,30 +411,82 @@ function CoffeeShopApp() {
     }
   };
 
-  // Admin: Advance order status
-  const handleAdvanceOrder = async (orderId: string, nextStatus: OrderStatus) => {
-    const success = await advanceOrderStatus(orderId, nextStatus);
-    if (success) {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
+  // Admin/Kitchen: Advance order status with Promise Toast (forward transitions, manual payment, cancel reason)
+  const handleAdvanceOrder = async (
+    orderId: string,
+    nextStatus: OrderStatus,
+    options?: { paymentMethod?: PaymentMethod; cancellationReason?: string }
+  ) => {
+    const targetLabel = statusDisplayNames[nextStatus] || nextStatus;
+    try {
+      await promiseToast(
+        advanceOrderStatus(orderId, nextStatus, options),
+        {
+          loading: {
+            title: `Memproses Pesanan #${orderId}...`,
+            description: `Mengalihkan antrean ke status "${targetLabel}"...`,
+          },
+          success: {
+            title: `Pesanan #${orderId} Berhasil Diperbarui!`,
+            description: `Status sekarang: "${targetLabel}"`,
+          },
+          error: {
+            title: `Gagal Memperbarui Pesanan #${orderId}`,
+            description: 'Terjadi kendala saat memperbarui status di database.',
+          },
+        }
       );
-      showToast(`Pesanan #${orderId} dialihkan ke status "${nextStatus}"`);
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o.id !== orderId) return o;
+          return {
+            ...o,
+            status: nextStatus,
+            payment_status: nextStatus === 'selesai' ? 'lunas' : o.payment_status,
+            payment_method:
+              nextStatus === 'selesai'
+                ? options?.paymentMethod || o.payment_method || 'tunai'
+                : o.payment_method,
+            cancellation_reason:
+              nextStatus === 'dibatalkan'
+                ? options?.cancellationReason || o.cancellation_reason
+                : o.cancellation_reason,
+          };
+        })
+      );
+    } catch {
+      // Handled by toast
     }
   };
 
-  // Admin: Toggle menu stock
+  // Admin: Toggle menu stock with Promise Toast
   const handleToggleMenu = async (itemId: string, current: boolean) => {
     const nextAvailability = !current;
-    const success = await updateMenuAvailability(itemId, nextAvailability);
-    if (success) {
+    const item = menu.find((m) => m.id === itemId);
+    const itemName = item ? item.name : 'Menu';
+    try {
+      await promiseToast(
+        updateMenuAvailability(itemId, nextAvailability),
+        {
+          loading: {
+            title: `Memperbarui ${itemName}...`,
+            description: nextAvailability ? 'Mengaktifkan kembali menu...' : 'Menandai menu sebagai habis...',
+          },
+          success: {
+            title: nextAvailability ? 'Menu Kembali Tersedia' : 'Menu Ditandai Habis',
+            description: `${itemName} berhasil ${nextAvailability ? 'diaktifkan' : 'ditandai habis'} di katalog.`,
+          },
+          error: {
+            title: 'Gagal Mengubah Ketersediaan',
+            description: 'Tidak dapat memperbarui status menu saat ini.',
+          },
+        }
+      );
       setMenu((prev) =>
         prev.map((m) => (m.id === itemId ? { ...m, is_available: nextAvailability } : m))
       );
-      showToast(
-        nextAvailability
-          ? 'Menu kembali diaktifkan (Tersedia)'
-          : 'Menu ditandai Habis'
-      );
+    } catch {
+      // Handled by toast
     }
   };
 
@@ -338,19 +536,47 @@ function CoffeeShopApp() {
     showToast('Berhasil keluar dari akun pemilik.');
   };
 
-  const currentOrder = orders.find((o) => o.id === currentOrderId);
+  const currentOrder = orders.find((o) => o.id === currentOrderId) || (myOrderIds.length > 0 ? orders.find((o) => o.id === myOrderIds[0]) : undefined);
+
+  // Jika di mode Pemilik dan sudah terautentikasi (atau demo lokal tanpa Supabase)
+  const isOwnerDashboardActive = mode === 'adm' && (authUser || !isSupabaseConfigured());
+
+  if (isOwnerDashboardActive) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-main)]">
+        <AdminDashboard
+          orders={orders}
+          menu={menu}
+          userRole={adminRole}
+          onRoleChange={setAdminRole}
+          onAdvanceOrder={handleAdvanceOrder}
+          onToggleAvailability={handleToggleMenu}
+          onCreateMenu={handleCreateMenu}
+          onUpdateMenu={handleUpdateMenu}
+          onDeleteMenu={handleDeleteMenu}
+          onRefresh={handleManualRefresh}
+          isRefreshing={isRefreshing}
+          announcementText={announcementText}
+          onUpdateAnnouncement={handleUpdateAnnouncement}
+          authUser={authUser}
+          onSignOut={handleSignOut}
+          onSwitchToCustomer={() => setMode('cust')}
+        />
+
+        {/* Animated Toast Stack (beUI) */}
+        <AnimatedToastStack
+          toasts={toasts}
+          onDismiss={dismissToast}
+          position="bottom-right"
+          placement="fixed"
+          maxVisible={4}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-main)] transition-colors">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-18 inset-x-0 z-50 flex justify-center pointer-events-none px-4 animate-bounce">
-          <div className="bg-neutral-900/90 dark:bg-white/90 text-white dark:text-neutral-900 px-4 py-2.5 rounded-2xl shadow-xl text-xs sm:text-sm font-semibold flex items-center gap-2 border border-white/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>{toastMessage}</span>
-          </div>
-        </div>
-      )}
 
       {/* Main App Header */}
       <Header
@@ -358,14 +584,33 @@ function CoffeeShopApp() {
         onModeChange={handleModeChange}
         tableNumber={form.table}
         authUser={authUser}
+        userRole={adminRole}
+        onRoleChange={setAdminRole}
         onOpenAuth={() => setShowAuthModal(true)}
         onSignOut={handleSignOut}
       />
 
       {/* Main Body Content */}
-      <main className="flex-1 px-4 py-6 sm:py-8 max-w-5xl w-full mx-auto">
+      <main className={`flex-1 py-6 sm:py-8 w-full mx-auto ${mode === 'adm' ? 'max-w-7xl px-3 sm:px-6' : 'max-w-5xl px-4'}`}>
         {mode === 'cust' ? (
           <>
+            {tableParam && tableValidation.checked && !tableValidation.valid && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs flex items-center justify-between gap-2 animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <WarningCircle size={16} weight="bold" className="text-rose-600 flex-shrink-0" />
+                  <span className="font-bold">QR Meja #{tableParam} Tidak Valid:</span>
+                  <span>{tableValidation.reason || 'Token QR tidak cocok atau kedai sedang tutup.'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, table: '' }))}
+                  className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-semibold text-[11px] hover:bg-rose-700 transition-colors cursor-pointer"
+                >
+                  Pesan via Kiosk
+                </button>
+              </div>
+            )}
+
             {custView === 'menu' && (
               <CustomerMenu
                 menu={menu}
@@ -443,6 +688,8 @@ function CoffeeShopApp() {
             <AdminDashboard
               orders={orders}
               menu={menu}
+              userRole={adminRole}
+              onRoleChange={setAdminRole}
               onAdvanceOrder={handleAdvanceOrder}
               onToggleAvailability={handleToggleMenu}
               onCreateMenu={handleCreateMenu}
@@ -452,6 +699,9 @@ function CoffeeShopApp() {
               isRefreshing={isRefreshing}
               announcementText={announcementText}
               onUpdateAnnouncement={handleUpdateAnnouncement}
+              authUser={authUser}
+              onSignOut={handleSignOut}
+              onSwitchToCustomer={() => setMode('cust')}
             />
           )
         )}
@@ -461,7 +711,9 @@ function CoffeeShopApp() {
       <AdminAuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
+          const user = await getAuthUser();
+          setAuthUser(user || ({ id: 'admin', email: 'barista@kedaisenja.com' } as User));
           setMode('adm');
           showToast('Berhasil masuk ke Dashboard Pemilik!');
         }}
@@ -485,6 +737,15 @@ function CoffeeShopApp() {
           </div>
         </div>
       </footer>
+
+      {/* Animated Toast Stack (beUI) */}
+      <AnimatedToastStack
+        toasts={toasts}
+        onDismiss={dismissToast}
+        position="bottom-right"
+        placement="fixed"
+        maxVisible={4}
+      />
     </div>
   );
 }

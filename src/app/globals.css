@@ -3,6 +3,14 @@
 @theme {
   --font-sans: var(--font-lato), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: var(--font-merriweather), Georgia, Cambria, "Times New Roman", serif;
+  --color-border: var(--border-subtle);
+  --color-foreground: var(--text-main);
+  --color-muted-foreground: var(--text-muted);
+  --color-destructive: var(--danger);
+  --color-ring: var(--primary);
+  --color-success: var(--success);
+  --color-card: var(--bg-surface);
+  --color-muted: var(--bg-muted);
 }
 
 :root {
@@ -95,4 +103,20 @@ h1, h2, h3, .font-serif, .brand-heading {
   background: var(--header-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+/* Marquee Running Text */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }

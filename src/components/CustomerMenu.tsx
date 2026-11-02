@@ -22,6 +22,7 @@ import { Marquee } from './motion/Marquee';
 import { SPRING_LAYOUT } from '@/lib/ease';
 
 import { DEFAULT_ANNOUNCEMENT, parseAnnouncementItems } from '@/lib/store';
+import { MenuIcon } from './MenuIcon';
 
 interface CustomerMenuProps {
   menu: MenuItem[];
@@ -106,7 +107,10 @@ export function CustomerMenu({
           <Marquee speed={30} className="text-xs text-[var(--text-muted)] font-medium">
             {announcementItems.map((item, idx) => (
               <React.Fragment key={idx}>
-                <span className="inline-flex items-center gap-1.5 text-[var(--text-main)] font-semibold">
+                <span
+                  className="inline-flex items-center gap-1.5 text-[var(--text-main)] font-semibold"
+                  suppressHydrationWarning
+                >
                   {item}
                 </span>
                 <span className="text-[var(--text-light)] select-none">•</span>
@@ -176,8 +180,8 @@ export function CustomerMenu({
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl">
-                    {item.emoji}
+                  <div className="w-full h-full flex items-center justify-center bg-[var(--bg-muted)] text-[var(--primary)]">
+                    <MenuIcon category={item.category} name={item.name} size={32} />
                   </div>
                 )}
                 {item.badge && (

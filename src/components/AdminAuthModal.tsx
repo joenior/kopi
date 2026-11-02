@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import {
   LockKey,
-  EnvelopeSimple,
   SignIn,
   UserPlus,
   X,
@@ -13,6 +12,8 @@ import {
   Database,
   ArrowRight,
 } from '@phosphor-icons/react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Input } from '@/components/motion/input';
 import { signInAdmin, signUpAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
 interface AdminAuthModalProps {
@@ -25,9 +26,20 @@ export function AdminAuthModal({ isOpen, onClose, onSuccess }: AdminAuthModalPro
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const emailError =
+    email.length > 0 && !email.includes('@')
+      ? 'Masukkan alamat email yang valid.'
+      : undefined;
+
+  const passwordError =
+    password.length > 0 && password.length < 6
+      ? 'Kata sandi minimal 6 karakter.'
+      : undefined;
 
   if (!isOpen) return null;
 
@@ -160,47 +172,40 @@ export function AdminAuthModal({ isOpen, onClose, onSuccess }: AdminAuthModalPro
           )}
 
           {/* Email Field */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-[var(--text-main)]">
-              Alamat Email Pemilik / Barista
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                <EnvelopeSimple size={16} />
-              </span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="barista@kedaisenja.com"
-                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all placeholder:text-[var(--text-light)]"
-              />
-            </div>
-          </div>
+          <Input
+            label="Alamat Email Pemilik / Barista"
+            type="email"
+            placeholder="barista@kedaisenja.com"
+            leftIcon={<Mail />}
+            value={email}
+            onChange={setEmail}
+            error={emailError}
+            reserveErrorLine
+            required
+          />
 
           {/* Password Field */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold text-[var(--text-main)]">
-                Kata Sandi
-              </label>
-              <span className="text-[10px] text-[var(--text-muted)]">Min. 6 karakter</span>
-            </div>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                <LockKey size={16} />
-              </span>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all placeholder:text-[var(--text-light)]"
-              />
-            </div>
-          </div>
+          <Input
+            label="Kata Sandi"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Minimal 6 karakter"
+            leftIcon={<Lock />}
+            value={password}
+            onChange={setPassword}
+            error={passwordError}
+            rightIcon={
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                className="pointer-events-auto cursor-pointer"
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            }
+            reserveErrorLine
+            required
+          />
 
           {/* Submit Button */}
           <button

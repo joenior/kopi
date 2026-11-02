@@ -148,7 +148,7 @@ export function TableManager({ orders }: TableManagerProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredTables.map((table) => {
             const tableState = getTableStatus(table.id);
-            const qrUrl = `${getBaseUrl()}/?meja=${table.id}`;
+            const qrUrl = `${getBaseUrl()}/?meja=${table.id}&token=token_meja_${table.id}_secret`;
 
             return (
               <div
@@ -263,7 +263,7 @@ export function TableManager({ orders }: TableManagerProps) {
               {/* QR Code Big */}
               <div className="p-4 bg-white rounded-2xl inline-block border-2 border-neutral-200 shadow-sm mx-auto">
                 <QRCodeSVG
-                  value={`${getBaseUrl()}/?meja=${selectedTable.id}`}
+                  value={`${getBaseUrl()}/?meja=${selectedTable.id}&token=token_meja_${selectedTable.id}_secret`}
                   size={160}
                   level="H"
                   fgColor="#2b1d14"
